@@ -1,0 +1,11 @@
+--- 
+- name: 'Dispatcher'
+  id: 0
+- name: 'Operations Expert'
+  id: 1
+- name: 'Scientist'
+  id: 2
+- name: 'Medic'
+  id: 3
+- name: 'Researcher'
+  id: 4
