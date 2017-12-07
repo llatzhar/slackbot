@@ -33,7 +33,7 @@ class Pandemic:
         #print("arrays2=" + str(arrays))
         return arrays
 
-    def dump_cards(self, deck):
+    def dump_deck(self, deck):
         s = ""
         for card in deck:
             s += card['name']
@@ -44,9 +44,12 @@ class Pandemic:
 
     def dump_players(self):
         s = ""
-        for player in self.players:
-            s += player.name
-            for card in player.cards:
+        for player_name in self.players:
+            p = self.players[player_name]
+            print(p)
+            
+            s += p.name
+            for card in p.cards:
                 s += " (" + card['name'] + ")"
             s += "\n"
         return s
@@ -62,6 +65,13 @@ class Pandemic:
             if c['pos'] == city['pos']:
                 c['infections'] = num
                 return
+
+    def get_city(self, pos):
+        for city in self.cities:
+            if pos == city['pos']:
+                return city
+        return
+            
 
     def setup(self):
         # master data
@@ -91,7 +101,7 @@ class Pandemic:
             m.append({'name': 'Epidemic', 'card_type': 'Epidemic'})
             random.shuffle(m)
             self.player_cards += m
-        print(self.dump_cards(self.player_cards))
+        print(self.dump_deck(self.player_cards))
 
         # infection deck
         for city in self.map_master:
@@ -106,7 +116,7 @@ class Pandemic:
             self.cities.append(c)
 
         print("======== before setup ======")
-        print(self.dump_cards(self.cities))
+        print(self.dump_deck(self.cities))
 
         # setup initial infections on city states
         for _ in range(3):
@@ -123,7 +133,7 @@ class Pandemic:
             self.put_cube(i, 1)
 
         print("======== after setup ======")
-        print(self.dump_cards(self.cities))
+        print(self.dump_deck(self.cities))
         
 
     def entry(self, username):
@@ -135,7 +145,6 @@ class Pandemic:
                 new_player.add_picked(c)
             self.players[new_player.name] = new_player
         print("======== after entry ======")
-        #print(self.dump_cards(self.player_cards))
         print(self.dump_players())
         return new_player
 
@@ -144,5 +153,22 @@ class Pandemic:
         return self.roles[i]
 
     def city_info(self, player_name):
-        return
+        info = {}
+        player = self.players[player_name]
+        #print(player)
+        #print(type(player))
+        city = self.get_city(player.pos)
+        #print(city)
+        #print(type(city))
+
+        links = []
+        for pos in city['links']:
+            c = self.get_city(pos)
+            links.append(c)
+
+        info['player'] = player
+        info['city'] = city
+        info['links'] = links
+
+        return info
     

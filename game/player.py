@@ -1,7 +1,7 @@
 class Player:
     def __init__(self, name):
         self.name = name
-        self.set_position = 4 # atlanta
+        self.set_position(4) # atlanta
         self.cards = []
         self.action = 0
 
