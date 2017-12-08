@@ -152,15 +152,26 @@ class Pandemic:
         i = random.randint(0, 4)
         return self.roles[i]
 
+    def drive(self, player_name, to_pos):
+        player = self.players[player_name]
+        current_city = self.get_city(player.pos)
+        if to_pos not in current_city['links']:
+            return
+        else:
+            player.pos = to_pos
+            player.action += 1
+        return player.pos
+        
+
     def city_info(self, player_name):
         info = {}
         player = self.players[player_name]
         #print(player)
         #print(type(player))
+
         city = self.get_city(player.pos)
         #print(city)
         #print(type(city))
-
         links = []
         for pos in city['links']:
             c = self.get_city(pos)
