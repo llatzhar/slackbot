@@ -29,6 +29,7 @@ def info_string(info):
     city = info['city']
     links = info['links']
     m = str(player.name) + ' is ' + str(player.role) + ".\n"
+    m += str(player.action) + ' action played.\n'
     m += "- in " + str(city['name']) + " (with " + str(city['infections']) + " infections).\n"
     m += "- have cards below\n"
     for card in player.cards:
@@ -50,19 +51,32 @@ def info(message):
     i = g.city_info(user[u'name'])
     message.reply(info_string(i))
 
+def parse(message):
+    user = message.channel._client.users[message.body['user']]
+    text = message.body['text']
+    command, word = text.split(None, 1)
+    return {"user": user[u'name'], "command": command, "param": int(word)}
+
 
 @respond_to(r'^drive\s+\S.*')
 def drive(message):
-    text = message.body['text']
-    command, word = text.split(None, 1)
-
-    user = sent_user(message)
-    r = g.drive(user[u'name'], int(word))
+    command = parse(message)
+    r = g.drive(command['user'], command['param'])
     if r is None:
-        message.reply('move to ' + str(r) + " is failed.\n")
+        message.reply('move to ' + command['param'] + " is failed.\n")
     else:
-        i = g.city_info(user[u'name'])
+        i = g.city_info(command['user'])
         message.reply("drive successed.\n" + info_string(i))
+
+@respond_to(r'^direct\s+\S.*')
+def direct(message):
+    command = parse(message)
+    r = g.direct(command['user'], command['param'])
+    if r is None:
+        message.reply('direct move to ' + command['param'] + " is failed.\n")
+    else:
+        i = g.city_info(command['user'])
+        message.reply("direct successed.\n" + info_string(i))
 
 
 if __name__ == "__main__":

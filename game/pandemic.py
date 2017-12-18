@@ -42,6 +42,16 @@ class Pandemic:
             s += "\n"
         return s
 
+    def dump_dict(self, deck):
+        s = ""
+        for key in deck:
+            c = deck[key]
+            s += c['name']
+            if 'infections' in c:
+                s += " (" + str(c['infections']) + ")"
+            s += "\n"
+        return s
+
     def dump_players(self):
         s = ""
         for player_name in self.players:
@@ -54,24 +64,26 @@ class Pandemic:
             s += "\n"
         return s
 
-    def pick_infection(self):
+    def pick_infection_deck(self):
         return self.infection_cards.pop()
 
-    def pick_player(self):
+    def pick_player_deck(self):
         return self.player_cards.pop()
 
     def put_cube(self, city, num):
-        for c in self.cities:
-            if c['pos'] == city['pos']:
-                c['infections'] = num
-                return
+        pos = city['pos']
+        c = self.cities[pos]
+        c['infections'] = num
+
+    def pop_player_card(self, player, pos):
+        for c in player.cards:
+            if pos == c['pos']:
+                player.cards.remove(c)
+                return c
+        return
 
     def get_city(self, pos):
-        for city in self.cities:
-            if pos == city['pos']:
-                return city
-        return
-            
+        return self.cities[pos]
 
     def setup(self):
         # master data
@@ -81,8 +93,8 @@ class Pandemic:
         # states
         self.player_cards = []
         self.infection_cards = []
-        self.cities = []
-
+        self.cities = {}
+        self.global_action = 0
 
         # buildup player card deck
         for city in self.map_master:
@@ -113,27 +125,28 @@ class Pandemic:
         for city in self.map_master:
             c = copy.copy(city)
             c["infections"] = 0
-            self.cities.append(c)
+            city_pos = c["pos"]
+            self.cities[city_pos] = c
 
         print("======== before setup ======")
-        print(self.dump_deck(self.cities))
+        print(self.dump_dict(self.cities))
 
         # setup initial infections on city states
         for _ in range(3):
-            i = self.pick_infection()
+            i = self.pick_infection_deck()
             print("popped3:" + i['name'])
             self.put_cube(i, 3)
         for _ in range(3):
-            i = self.pick_infection()
+            i = self.pick_infection_deck()
             print("popped2:" + i['name'])
             self.put_cube(i, 2)
         for _ in range(3):
-            i = self.pick_infection()
+            i = self.pick_infection_deck()
             print("popped1:" + i['name'])
             self.put_cube(i, 1)
 
         print("======== after setup ======")
-        print(self.dump_deck(self.cities))
+        print(self.dump_dict(self.cities))
         
 
     def entry(self, username):
@@ -141,7 +154,7 @@ class Pandemic:
             new_player = Player(username)
             new_player.set_role(self.role())
             for _ in range(2): # TODO 2 depends on player number. proceed epidemic?
-                c = self.pick_player()
+                c = self.pick_player_deck()
                 new_player.add_picked(c)
             self.players[new_player.name] = new_player
         print("======== after entry ======")
@@ -152,16 +165,51 @@ class Pandemic:
         i = random.randint(0, 4)
         return self.roles[i]
 
+
+    def check_draw(self, player):
+        player.action += 1
+        if player.action > 3:
+            player.action = 0 
+            for _ in range(2):
+                c = self.pick_player_deck()
+                player.add_picked(c)
+
+        self.global_action += 1
+        if self.global_action > 3:
+            self.global_action = 0
+            i = self.pick_infection_deck()
+            print("infection:" + i['name'])
+            self.put_cube(i, 1)
+
+        print("======== after check_draw ======")
+        print(self.dump_dict(self.cities))
+        return
+
+
     def drive(self, player_name, to_pos):
         player = self.players[player_name]
+        if player is None:
+            return
         current_city = self.get_city(player.pos)
         if to_pos not in current_city['links']:
             return
-        else:
-            player.pos = to_pos
-            player.action += 1
-        return player.pos
         
+        player.pos = to_pos
+        self.check_draw(player)
+        return player.pos
+
+
+    def direct(self, player_name, to_card_pos):
+        player = self.players[player_name]
+        if player is None:
+            return
+        to_card = self.pop_player_card(player, to_card_pos)
+        if to_card is None:
+            return
+        
+        player.pos = to_card_pos
+        self.check_draw(player)
+        return player.pos
 
     def city_info(self, player_name):
         info = {}
