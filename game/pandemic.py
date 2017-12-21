@@ -64,8 +64,13 @@ class Pandemic:
             s += "\n"
         return s
 
-    def pick_infection_deck(self):
+    def draw_infection_deck(self):
         return self.infection_cards.pop()
+
+    def bottom_draw_infection_deck(self):
+        last = self.infection_cards[-1]
+        self.infection_cards.remove(last)
+        return last
 
     def pick_player_deck(self):
         return self.player_cards.pop()
@@ -82,6 +87,20 @@ class Pandemic:
                 return c
         return
 
+    def reshuffle_discarded(self):
+        print("before reshuffle ---------------")
+        print(self.dump_deck(self.discarded_infections))
+        print("----")
+        print(self.dump_deck(self.infection_cards))
+        random.shuffle(self.discarded_infections)
+        t = self.infection_cards + self.discarded_infections
+        self.infection_cards = t
+        self.discarded_infections.clear()
+        print("after reshuffle ---------------")
+        print(self.dump_deck(self.discarded_infections))
+        print("----")
+        print(self.dump_deck(self.infection_cards))
+
     def get_city(self, pos):
         return self.cities[pos]
 
@@ -95,6 +114,8 @@ class Pandemic:
         self.infection_cards = []
         self.cities = {}
         self.global_action = 0
+        self.infection_rate = 2
+        self.discarded_infections = []
 
         # buildup player card deck
         for city in self.map_master:
@@ -103,7 +124,7 @@ class Pandemic:
             self.player_cards.append(c)
         for card in self.specials:
             c = copy.copy(card)
-            card["card_type"] = "special"
+            c["card_type"] = "special"
             self.player_cards.append(c)
         random.shuffle(self.player_cards)
         divided = self.divide(self.player_cards, 4)        # todo 4 depends on difficulty
@@ -128,25 +149,30 @@ class Pandemic:
             city_pos = c["pos"]
             self.cities[city_pos] = c
 
-        print("======== before setup ======")
-        print(self.dump_dict(self.cities))
+        #print("======== before setup ======")
+        #print(self.dump_dict(self.cities))
 
         # setup initial infections on city states
         for _ in range(3):
-            i = self.pick_infection_deck()
+            i = self.draw_infection_deck()
             print("popped3:" + i['name'])
             self.put_cube(i, 3)
+            self.discarded_infections.append(i)
         for _ in range(3):
-            i = self.pick_infection_deck()
+            i = self.draw_infection_deck()
             print("popped2:" + i['name'])
             self.put_cube(i, 2)
+            self.discarded_infections.append(i)
         for _ in range(3):
-            i = self.pick_infection_deck()
+            i = self.draw_infection_deck()
             print("popped1:" + i['name'])
             self.put_cube(i, 1)
+            self.discarded_infections.append(i)
 
-        print("======== after setup ======")
-        print(self.dump_dict(self.cities))
+        #print("======== after setup ======")
+        #print(self.dump_dict(self.cities))
+        #print("======== discarded ======")
+        #print(self.dump_deck(self.discarded_infections))
         
 
     def entry(self, username):
@@ -170,16 +196,36 @@ class Pandemic:
         player.action += 1
         if player.action > 3:
             player.action = 0 
+            print("====")
             for _ in range(2):
                 c = self.pick_player_deck()
-                player.add_picked(c)
+                print(c)
+                # TODO check epidemic
+                if c['card_type'] == 'Epidemic':
+                    self.infection_rate += 1
+                    last_infection = self.bottom_draw_infection_deck()
+                    print("!!!!! epidemic with " + last_infection['name'])
+                    self.put_cube(l, 3)
+                    print(self.dump_dict(self.cities))
+                    self.discarded_infections.append(last_infection)
+                    self.reshuffle_discarded()
+                else:
+                    player.add_picked(c)
+            print("====")
 
+        print("player has -------")
+        for c in player.cards:
+            print(c)
+
+        # infections as global
         self.global_action += 1
         if self.global_action > 3:
             self.global_action = 0
-            i = self.pick_infection_deck()
-            print("infection:" + i['name'])
-            self.put_cube(i, 1)
+            for _ in range(self.infection_rate):
+                i = self.draw_infection_deck()
+                print("infection:" + i['name'])
+                self.put_cube(i, 1)
+                self.discarded_infections.append(i)
 
         print("======== after check_draw ======")
         print(self.dump_dict(self.cities))
@@ -212,6 +258,9 @@ class Pandemic:
         return player.pos
 
     def city_info(self, player_name):
+        if player_name not in self.players:
+            return
+
         info = {}
         player = self.players[player_name]
         #print(player)
@@ -228,6 +277,12 @@ class Pandemic:
         info['player'] = player
         info['city'] = city
         info['links'] = links
+        info['infection_rate'] = self.infection_rate
+
+        print("peeping deck ---------------(discarded)")
+        print(self.dump_deck(self.discarded_infections))
+        print("----(remain infections)")
+        print(self.dump_deck(self.infection_cards))
 
         return info
     

@@ -49,7 +49,10 @@ def info(message):
     #print(message.body)
     user = sent_user(message)
     i = g.city_info(user[u'name'])
-    message.reply(info_string(i))
+    if i is None:
+        message.reply(user[u'name'] + " is not entried.")
+    else:
+        message.reply(info_string(i))
 
 def parse(message):
     user = message.channel._client.users[message.body['user']]
@@ -63,7 +66,7 @@ def drive(message):
     command = parse(message)
     r = g.drive(command['user'], command['param'])
     if r is None:
-        message.reply('move to ' + command['param'] + " is failed.\n")
+        message.reply('move to ' + str(command['param']) + " is failed.\n")
     else:
         i = g.city_info(command['user'])
         message.reply("drive successed.\n" + info_string(i))
@@ -73,7 +76,7 @@ def direct(message):
     command = parse(message)
     r = g.direct(command['user'], command['param'])
     if r is None:
-        message.reply('direct move to ' + command['param'] + " is failed.\n")
+        message.reply('direct move to ' + str(command['param']) + " is failed.\n")
     else:
         i = g.city_info(command['user'])
         message.reply("direct successed.\n" + info_string(i))
